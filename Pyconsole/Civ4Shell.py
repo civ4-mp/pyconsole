@@ -6,10 +6,11 @@
 """
 
 import cmd
+import ast
 import sys
 import re
 import json
-import os.path
+# import os.path
 import socket
 from socket import gethostname
 from time import sleep
@@ -102,10 +103,12 @@ class Client:
         self.s.send((msg + EOF).encode(ENCODING2))  # Python3: str->bytes
         ret = ""
         if bRecv:
-            recv = self.s.recv(BUFFER_SIZE).decode(ENCODING2)  # Python3: bytes->str
+            recv = self.s.recv(BUFFER_SIZE).decode(ENCODING2)
+            # Python3: bytes->str
             while len(recv) == BUFFER_SIZE and recv[-1] != EOF:
                 ret += recv
-                recv = self.s.recv(BUFFER_SIZE).decode(ENCODING2)  # Python3: bytes->str
+                recv = self.s.recv(BUFFER_SIZE).decode(ENCODING2)
+                # Python3: bytes->str
 
             recv = recv.strip(EOF)
             # sys.stdout.write(recv)
@@ -119,10 +122,12 @@ def caster(v):
         return "int"
     if isinstance(v, float):
         return "float"
+    if isinstance(v, bytes):
+        return "bytes"
     if isinstance(v, str):
         return "str"
-    if isinstance(v, unicode):
-        return "unicode"
+    # if isinstance(v, unicode):
+    #     return "unicode"
     print("To caster defined for %s" % (str(type(v))))
     return None
 
@@ -204,7 +209,8 @@ class Civ4Shell(cmd.Cmd):
 
     def feedback(self, s):
         if RESULT_LINE_SPLIT is not None:
-            s = restrict_textwidth(s, RESULT_LINE_SPLIT[0], RESULT_LINE_SPLIT[1])
+            s = restrict_textwidth(s, RESULT_LINE_SPLIT[0],
+                                   RESULT_LINE_SPLIT[1])
 
         s_with_tabs = "%s%s%s%s" % (
             self.colorOut,
@@ -230,7 +236,9 @@ class Civ4Shell(cmd.Cmd):
             result_json = json.loads(result, encoding=ENCODING)
         except ValueError as e:
             print(result)
-            result_json = {"info": "Can not decode PB reply.", "return": "fail"}
+            print(e)
+            result_json = {"info": "Can not decode PB reply.",
+                           "return": "fail"}
 
         # Predefined styles for output printing
         if iprint_result == 2:
@@ -274,7 +282,7 @@ class Civ4Shell(cmd.Cmd):
         return True
 
     def do_remove_landmarks(self, arg):
-        self.verbose("for i in range(CyMap().numPlots()):" \
+        self.verbose("for i in range(CyMap().numPlots()):"
                      " CyEngine().removeLandmark(CyMap().plotByIndex(i))")
 
     def do_remove_signs(self, arg):
@@ -317,6 +325,56 @@ print("Removed %i signs" %(__num_removed,) )
         print(d)
         self.default(d)
 
+    def do_names(self, arg):
+        """Lists TypeInfo String constants for type.
+
+        Without argument: lists available types, e.g. 'Terrain'
+        With type name: lists types like 'TERRAIN_GRASS'
+        """
+        if len(arg.strip()) == 0:
+            # Note that this old python version does not support
+            # something like '__g = pydoc.render_doc(gc)'
+            imports = 'import re; import pydoc; import sys; import cStringIO'
+            d = '''\
+__stdout_backup = sys.stdout
+__f = cStringIO.StringIO()
+sys.stdout = __f; pydoc.doc(gc); sys.stdout = __stdout_backup
+__d = __f.getvalue()
+__f.close()
+__g = re.findall("getNum([\S]+)Infos(...)", __d)
+__n  = [x[0] for x in __g]
+print(__n)
+'''
+            self.send("p:" + imports) # splits output of import command lines from print(__n).
+            self.bImport_doc = True
+
+            # print(d)
+            result = str(self.send("p:" + d))
+
+            # Convert string representation of list into list obj
+            names = ast.literal_eval(result)
+
+            # Print names in multiple columns
+            pos, l = 0, len(names)
+            stride = 4
+            while pos < l:
+                line = names[pos:pos+stride]
+                line = ["{:>20s}".format(item) for item in line]
+                self.feedback("".join(line))
+                pos += stride
+
+        else:
+            d = '''\
+__l = gc.getNum{0}Infos()
+for __i in range(__l):
+    __type = gc.get{0}Info(__i)
+    print("%3d %35.35s %35.35s" % (__i, __type.getType(), __type.getText()))
+'''.format(arg)
+
+            # print(d)
+            result = str(self.send("p:" + d))
+            self.feedback(result)
+
     def do_config(self, args):
         """Show, save, reload or edit Pitboss configuration (requires PB Mod).
 
@@ -349,7 +407,8 @@ print("Removed %i signs" %(__num_removed,) )
                 if isinstance(v, dict):
                     print("%s:" % (k,))
                     for kk in v:
-                        print("  %*.*s  %s" % (-s[1], s[1], kk + ":", str(v[kk])))
+                        print("  %*.*s  %s" % (
+                            -s[1], s[1], kk + ":", str(v[kk])))
                 else:
                     print("%*.*s  %s" % (-s[0], s[0], k + ":", str(v)))
             print("==================================")
@@ -448,7 +507,7 @@ else:
         if mode in ["pb_wizard", "pb_admin"]:
             result = self.send("l:")
             if result:
-                result = result[result.find("{") : result.rfind("}") + 1]
+                result = result[result.find("{"): result.rfind("}") + 1]
 
             try:
                 loadable_check = json.loads(result, encoding=ENCODING2)
@@ -477,7 +536,8 @@ else:
             # and quit PB server. At next startup, the new file should be
             # loaded.
             self.send(
-                'p:PbSettings["save"]["oneOffAutostart"]' "= 1; PbSettings.save()"
+                'p:PbSettings["save"]["oneOffAutostart"]' "= 1;'\
+                'PbSettings.save()"
             )
             print("Restart PB server")
             sleep(1)
@@ -537,7 +597,8 @@ else:
         try:
             update_status = json.loads(result, encoding=ENCODING2)
         except ValueError:
-            update_status = {"info": "Can not decode PB reply.", "return": "fail"}
+            update_status = {"info": "Can not decode PB reply.",
+                             "return": "fail"}
 
         self.feedback(update_status.get("info"))
 
@@ -645,7 +706,8 @@ else:
             if len(players) > 20 and not bAll:
                 # Reduce on currently active players, if any
                 players_online = [
-                    pl for pl in players if pl.get("ping", "").strip().startswith("[")
+                    pl for pl in players
+                    if pl.get("ping", "").strip().startswith("[")
                 ]
                 if len(players_online) > 0:
                     players = players_online
@@ -660,37 +722,45 @@ else:
             elif sort_type == "score":
                 players_sorted = sorted(
                     players,
-                    key=lambda pl: int(pl.get("score", 0)) * 100 + int(pl.get("id", 0)),
+                    key=lambda pl: int(
+                        pl.get("score", 0)) * 100 + int(pl.get("id", 0)),
                     reverse=not bReverse,
                 )
             else:
-                players_sorted = players.__reversed__() if bReverse else players
+                players_sorted = (players.__reversed__() if bReverse
+                                  else players)
 
-            gcu_head = "%s %s %s " % ("Gold", "Cities", "Units") if bAll else ""
+            if bAll:
+                gcu_head = "{:s} {:s} {:s} ".format("Gold", "Cities", "Units")
+            else:
+                gcu_head = ""
             print(
-                "\n%c %s %12.12s %s %12.12s %12.12s %s%s"
-                % ("X", "Id", "Player", "Score", "Leader", "Nation", gcu_head, "Status")
-            )
+                "\n{:s} {:2s} {:>12s} {:>5s} {:>12s} {:>12s} {:s}{:s}"
+                .format(
+                    "X", "Id", "Player", "Score",
+                    "Leader", "Nation", gcu_head, "Status"
+                ))
             for pl in players_sorted:
-                gcu = (
-                    "%4i %6i %5i "
-                    % (pl.get("gold", -1), pl.get("nCities", -1), pl.get("nUnits", -1))
-                    if bAll
-                    else ""
-                )
+                if bAll:
+                    gcu = ("{:4d} {:6d} {:5d} ".format(
+                        pl.get("gold", -1),
+                        pl.get("nCities", -1),
+                        pl.get("nUnits", -1)))
+                else:
+                    gcu = ""
+
                 print(
-                    "%c %2i %12.12s %5.5s %12.12s %12.12s %s%s"
-                    % (
+                    "{:s} {:2d} {:>12s} {:>5s} {:>12s} {:>12s} {:s}{:s}"
+                    .format(
                         "*" if pl.get("finishedTurn") else " ",
                         pl.get("id", -1),
-                        pl.get("name", "?"),
+                        pl.get("name", "?")[:12],
                         pl.get("score", "-1"),
-                        pl.get("leader", "?"),
-                        pl.get("civilization", "?"),
+                        pl.get("leader", "?")[:12],
+                        pl.get("civilization", "?")[:12],
                         gcu,
-                        player_status(pl),
-                    )
-                )
+                        player_status(pl)
+                    ))
 
         if mode == "pb_wizard":
             print(
@@ -772,7 +842,8 @@ else:
             if l > num - 1:
                 dSel = self.latest_save_list[num - 1]
             else:
-                self.warn("Latest list of saves only contain %i elements" % (l,))
+                self.warn("Latest list of saves only contain {} elements"
+                          .format(l))
         else:
             reg = re.compile(pat)
             for s in self.latest_save_list:
@@ -851,15 +922,14 @@ else:
         if d:
             result = str(self.send("p:" + d)).strip()
             if result == "0":
-                self.feedback("End turn of player {0} successful.".format(iPlayer))
+                self.feedback("End turn of player {0} successful."
+                              .format(iPlayer))
             elif result == "-1":
-                self.warn("Turn of player {0} is already finished.".format(iPlayer))
+                self.warn("Turn of player {0} is already finished."
+                          .format(iPlayer))
             else:
-                self.warn(
-                    "End turn of player {0} failed. Server returns '{1}'".format(
-                        iPlayer, result
-                    )
-                )
+                self.warn("End turn of player {0} failed. Server returns '{1}'"
+                          .format(iPlayer, result))
 
     def do_pb_set_timer(self, arg):
         """ Set timer for next round(s).
@@ -954,7 +1024,8 @@ else:
             msg = " ".join(args[0:])
             iSoundId = 0
 
-        result = self.webserver_action("chat3", {"msg": msg, "sound": iSoundId}, 1)
+        result = self.webserver_action("chat3",
+                                       {"msg": msg, "sound": iSoundId}, 1)
         if result.get("return") == "ok":
             chat_log = result.get("log", [])
             for chat_msg in chat_log:
@@ -1120,8 +1191,8 @@ if( gc.getMAX_CIV_PLAYERS() > {iPlayer} and {iPlayer} > -1):
 
         Usage rename_player {Player id} {New name}
 
-        Note that Civ4's functions .setName(...) and .getName() are tricky because
-        the return values are from type unicode.
+        Note that Civ4's functions .setName(...) and .getName() are tricky
+        because the return values are from type unicode.
         Crash: print(pPlayer.getName())
            Ok: print(pPlayer.getName.encode('utf-8'))
         """
@@ -1156,13 +1227,11 @@ else:
             result = str(self.send("p:" + d)).strip()
             # Note: Possible return value is 'load_module encodings.utf_8\n0'
             if result.endswith("0"):
-                self.feedback("Renaming of player {0} successful.".format(iPlayer))
+                self.feedback("Renaming of player {0} successful."
+                              .format(iPlayer))
             else:
-                self.warn(
-                    "Renaming of player {0} failed. Server returns '{1}'".format(
-                        iPlayer, result
-                    )
-                )
+                self.warn("Renaming of player {0} failed. Server returns '{1}'"
+                          .format(iPlayer, result))
 
     def do_rename_city(self, arg):
         """Allows renaming with respect to some Non-ASCII characters (cp1252 encoding).
@@ -1323,14 +1392,18 @@ print(__counter)
         print("Number of affected plots: '{}'".format(result))
 
     def do_remove_ocean_forest(self, arg):
-        """Loops over map and remove forest and jungle feature on ocean plots."""
+        """Loops over map and remove forest and jungle feature on ocean plots.
+        """
 
         d = """\
 __num_changed_plots = 0
+__list = [
+  gc.getInfoTypeForString("FEATURE_FOREST"),
+  gc.getInfoTypeForString("FEATURE_JUNGLE")]
 for i in range(CyMap().numPlots()):
     __plot = CyMap().plotByIndex(i)
     if __plot.getPlotType() == PlotTypes.PLOT_OCEAN:
-        if (__plot.getFeatureType() in [gc.getInfoTypeForString("FEATURE_FOREST"),gc.getInfoTypeForString("FEATURE_JUNGLE")]):
+        if (__plot.getFeatureType() in __list):
             __plot.setFeatureType(-1, -1)
             __num_changed_plots += 1
 
@@ -1338,6 +1411,26 @@ print(__num_changed_plots)
 """
         result = str(self.send("p:" + d))
         print(result)
+
+    def do_id(self, arg):
+        """ Shortcut for gc.getInfoTypeForString("NAME") """
+
+        if len(arg) < 1:
+            print(self.do_id.__doc__)
+            return
+
+        d = None
+        try:
+            args = arg.split(" ")
+            sName = args[0]
+            d = 'print(gc.getInfoTypeForString("{sName}"))'.format(sName=sName)
+
+        except:
+            self.warn("Input argument parsing failed.")
+
+        if d:
+            result = str(self.send("p:" + d)).strip()
+            self.feedback(result)
 
     def verbose(self, line, print_input_line=True):
         """Print line and then send it as python command"""
@@ -1391,7 +1484,8 @@ except SyntaxError:
     do_help.__doc__ %= (cmd.Cmd.do_help.__doc__)
 
     def do_khelp(self, args):
-        """khelp [regex pattern] lists matching library functions/important variables.
+        """khelp [regex pattern] lists matching library functions/important
+        variables.
 
         If a more detailed description exists the entry will be
         marked with '*'.
@@ -1480,7 +1574,8 @@ except SyntaxError:
             else:
                 if k == conf_key[0] and caster(v):
                     if new_value:
-                        changes.append(template_edit1 % (k, caster(v), new_value))
+                        changes.append(template_edit1 % (
+                            k, caster(v), new_value))
                     else:
                         changes.append(template_del1 % (k,))
 
@@ -1503,7 +1598,7 @@ except SyntaxError:
         # print(result)
         # Strip unwanted output (reason?!)
         if result:
-            result = result[result.find("{") : result.rfind("}") + 1]
+            result = result[result.find("{"): result.rfind("}") + 1]
 
         # print(result)
         try:
@@ -1527,7 +1622,7 @@ encoding='{5}'))""".format(
         # print(d)
         result = str(self.send("p:" + d))
         if result:
-            json_str = result[result.find("{") : result.rfind("}") + 1]
+            json_str = result[result.find("{"): result.rfind("}") + 1]
 
             try:
                 saves = json.loads(json_str, encoding=ENCODING2)
@@ -1548,7 +1643,8 @@ class Completer:
         self.shell = shell
 
         self.matching_words = []  # For completer
-        self.completer = self.complete_advanced if completer is None else completer
+        self.completer = (self.complete_advanced
+                          if completer is None else completer)
         if bBind:
             readline.parse_and_bind("tab: complete")
             readline.set_completer(self.complete)
@@ -1579,12 +1675,15 @@ class Completer:
 
         if len(l) == 0:
             l.extend(
-                [i["name"] for i in CIV4_LIB_FUNCTIONS if i["name"].startswith(text)]
+                [i["name"] for i in CIV4_LIB_FUNCTIONS
+                 if i["name"].startswith(text)]
             )
             l.extend(
-                [i["name"] for i in CIV4_LIB_CLASSES if i["name"].startswith(text)]
+                [i["name"] for i in CIV4_LIB_CLASSES
+                 if i["name"].startswith(text)]
             )
-            l.extend([i["name"] for i in CIV4_LIB_OTHER if i["name"].startswith(text)])
+            l.extend([i["name"] for i in CIV4_LIB_OTHER
+                      if i["name"].startswith(text)])
 
         return l
         # if(state < len(l)):
@@ -1604,9 +1703,9 @@ def restrict_textwidth(text, max_width, prefix):
         posR = text.find("\n", posL, posL + max_width)
         if posR == -1:
             text = "%s\n%s%s" % (
-                text[0 : posL + max_width],
+                text[0:posL + max_width],
                 prefix,
-                text[posL + max_width :],
+                text[posL + max_width:],
             )
             posL += max_width + 1 + len(prefix) + 1
         else:
