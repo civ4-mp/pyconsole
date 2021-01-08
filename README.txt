@@ -1,6 +1,6 @@
 == Shell for Civ4 ==
 
-This extensions expands the Civ4 by a local TCP interface.
+This extensions expands Civ4 by a local TCP interface.
 You can send arbitary python commands to the running instance.
 
 
@@ -85,4 +85,20 @@ d) List 10 saves, and restart with second save of list
 >       pb_start
 >       bye
 
+e) Use 'names' to list ids of XML defined enums and 
+   change plot feature.
+> python Pyconsole 3333
+>       p = CyMap().plot(0,0)
+>       p.getFeatureType()
+>       names Feature
+[list of features]
+>       doc p1.setFeatureType
+>       p.setFeatureType(eNewValue, iVariety)
+>       bye
 
+
+== Known bugs ==
+
+• If the command needs too long to forge the reply, the output
+will only be printed after sending the next command.
+• Not fully compatible with Python3
