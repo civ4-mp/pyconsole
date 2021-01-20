@@ -1106,7 +1106,10 @@ if( gc.getMAX_CIV_PLAYERS() > {iPlayer} and {iPlayer} > -1):
     (__c, __iterOut) = __pPl.firstCity(False)
     __cNames = []
     while __c is not None:
-        __cNames.append(__c.getName().encode("utf-8"))
+        __pos = "(%i,%i)" % (__c.plot().getX(),__c.plot().getY())
+        __cNames.append("%-30s %s" % (
+          __c.getName().encode("utf-8"),
+          __pos))
         (__c, __iterOut) = __pPl.nextCity(__iterOut, False)
 
     print("\\n".join(__cNames))
@@ -1154,7 +1157,8 @@ if( gc.getMAX_CIV_PLAYERS() > {iPlayer} and {iPlayer} > -1):
     __uNames = []
     while __u is not None:
         if  __u.plot().isCity():
-            __pos = __u.plot().getPlotCity().getName().encode("utf-8")
+            __pos = "(%i,%i) %s" % (__u.plot().getX(),__u.plot().getY(),
+                    __u.plot().getPlotCity().getName().encode("utf-8"))
         else:
             __pos = "(%i,%i)" % (__u.plot().getX(),__u.plot().getY())
         __uNames.append("%3i %-30s %s" % (
