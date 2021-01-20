@@ -232,8 +232,7 @@ class Civ4Shell(cmd.Cmd):
         action = {"action": action_name, "args": action_args}
         result = str(self.send("A:" + json.dumps(action)))
         try:
-            # result_json = json.loads(result, encoding=ENCODING2)
-            result_json = json.loads(result, encoding=ENCODING)
+            result_json = json.loads(result)
         except ValueError as e:
             print(result)
             print(e)
@@ -510,7 +509,7 @@ else:
                 result = result[result.find("{"): result.rfind("}") + 1]
 
             try:
-                loadable_check = json.loads(result, encoding=ENCODING2)
+                loadable_check = json.loads(result)
             except ValueError:
                 print("Can not decode result of loadable check.")
                 return
@@ -595,7 +594,7 @@ else:
         # self.send("p:PB.quit()")
         result = str(self.send("U:"))
         try:
-            update_status = json.loads(result, encoding=ENCODING2)
+            update_status = json.loads(result)
         except ValueError:
             update_status = {"info": "Can not decode PB reply.",
                              "return": "fail"}
@@ -647,7 +646,7 @@ else:
 
         result = str(self.send("s:"))
         try:
-            status = json.loads(result, encoding=ENCODING2)
+            status = json.loads(result)
         except ValueError:
             status = {"error": "Can not decode status."}
 
@@ -1602,7 +1601,7 @@ except SyntaxError:
 
         # print(result)
         try:
-            settings = json.loads(result, encoding=ENCODING2)
+            settings = json.loads(result)
         except ValueError:
             print("Can not decode settings")
             settings = {}
@@ -1625,7 +1624,7 @@ encoding='{5}'))""".format(
             json_str = result[result.find("{"): result.rfind("}") + 1]
 
             try:
-                saves = json.loads(json_str, encoding=ENCODING2)
+                saves = json.loads(json_str)
                 return saves.get("saves", [])
             except ValueError:
                 self.warn("Can not decode list of saves.")
@@ -1744,8 +1743,9 @@ def start(**kwargs):
     except KeyboardInterrupt:
         shell.warn("Ctrl+C pressed. Quitting Civ4 shell.")
         shell.close()
-    except TypeError:
+    except TypeError as e:
         shell.warn("Type error. Quitting Civ4 shell.")
+        print(e)
         shell.close()
     finally:
         shell.close()
