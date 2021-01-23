@@ -139,7 +139,7 @@ class Civ4Shell(cmd.Cmd):
     Exit shell with 'bye'.
 
     MODDING-NOTE: Predefined commands are designed for pitboss servers.
-                  They had no effect on normal Civ4 instances.
+                  A subset of them had no effect in normal Civ4 instances.
     """
 
     remote_server_adr = (PYCONSOLE_HOSTNAME, PYCONSOLE_PORT)
@@ -250,6 +250,12 @@ class Civ4Shell(cmd.Cmd):
             self.feedback("{0}".format(result_json.get("info")))
 
         return result_json
+
+    # ----- for reading of stdin required -----
+    def do_EOF(self, _):
+        print("Got EOF")
+        return True # quit loop
+        # ==> This avoids infinite looping while reading EOF
 
     # ----- internal shell commands -----
     def do_connect(self, arg):
