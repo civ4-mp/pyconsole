@@ -339,7 +339,7 @@ print("Removed %i signs" %(__num_removed,) )
         if len(arg.strip()) == 0:
             # Note that this old python version does not support
             # something like '__g = pydoc.render_doc(gc)'
-            imports = 'import re; import pydoc; import sys; import cStringIO'
+            imports = 'import re, pydoc, sys, cStringIO'
             d = '''\
 __stdout_backup = sys.stdout
 __f = cStringIO.StringIO()
