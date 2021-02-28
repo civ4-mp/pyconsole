@@ -4,6 +4,8 @@
 import sys
 import Civ4Shell
 
+import argparse
+
 try:
     from ports_local import PORT_MAPS
 except:
@@ -12,29 +14,27 @@ except:
     }
 
 
-if len(sys.argv) < 2:
-    print("""Usage: python {} [hostname] {{PORT or GAME NAME}}
+parser = argparse.ArgumentParser(description='Commandline interface to Civ4 games with pyconsole support.')
+parser.add_argument('-q', '--quiet', action='store_true', 
+                    help='Print retured text from game only.')
+#parser.add_argument('-p', '--port', type=int, default=Civ4Shell.PYCONSOLE_PORT,
+#                    help="Port of Civ4's Pyconsole backend.")
+parser.add_argument('-x', '--host', type=str, default=Civ4Shell.PYCONSOLE_HOSTNAME,
+                    help='Hostname')
+parser.add_argument('game', help="PORT or GAME NAME. Default port of backend is {port}.".format(port=Civ4Shell.PYCONSOLE_PORT))
 
-            If no hostname is given, localhost is used.
-            Fill game names into PORT_MAPS dict for easier startup.
-            """.format(sys.argv[0])
-    )
-    sys.exit(0)
 
+args = parser.parse_args()
 
-port = Civ4Shell.PYCONSOLE_PORT
-if len(sys.argv) > 2:
-    host = str(sys.argv[1])
-    port = sys.argv[2]
-elif len(sys.argv) > 1:
-    port = sys.argv[1]
+if args.quiet:
+    Civ4Shell.QUIET = True
 
-if port in PORT_MAPS:
-    port = PORT_MAPS[port]
+# Translate game name into port
+if args.game in PORT_MAPS:
+    port = PORT_MAPS[args.game]
+else:
+    port = args.game
 
 port = int(port)
+Civ4Shell.start(port=port, host=args.host)
 
-if len(sys.argv) > 2:
-    Civ4Shell.start(port=port, host=host)
-else:
-    Civ4Shell.start(port=port)

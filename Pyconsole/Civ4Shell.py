@@ -48,6 +48,9 @@ MY_HOSTNAME = "localhost"  #
 # Note that colouring does not work in Git bash (Win), but Cmd.exe.
 USE_COLORAMA = True
 
+# Quiet flag -q/--quiet for reduced output on stdout
+QUIET = False
+
 # Storage file for history
 PYCONSOLE_HIST_FILE = ".pyconsole.history"
 
@@ -77,6 +80,16 @@ if USE_COLORAMA:
     from colorama import init, Fore, Back, Style
 
     init()
+
+# Wrap printing function to respect quiet flag
+__print = print
+def print(*largs, **kwargs):
+    if QUIET and not kwargs.get("force"):
+        return
+
+    kwargs.pop("force", None)
+
+    __print(*largs, **kwargs)
 
 
 class Client:
@@ -218,7 +231,11 @@ class Civ4Shell(cmd.Cmd):
             s.rstrip("\n").replace("\n", "\n" + RESULT_LINE_PREFIX),
             self.colorReset,
         )
-        print(s_with_tabs)
+        if QUIET:
+            print(s.rstrip(), force=True)
+        else:
+            print(s_with_tabs)
+
         # Restore prompt
         sys.stdout.write("%s" % (MY_PROMPT))
 
@@ -253,7 +270,7 @@ class Civ4Shell(cmd.Cmd):
 
     # ----- for reading of stdin required -----
     def do_EOF(self, _):
-        print("Got EOF")
+        # print("Got EOF")
         return True # quit loop
         # ==> This avoids infinite looping while reading EOF
 
@@ -299,6 +316,38 @@ for i in range(CyEngine().getNumSigns()):
     __num_removed += 1
 print("Removed %i signs" %(__num_removed,) )
 """
+        result = str(self.send("p:"+d))
+        print(result)
+
+    def do_immobile_units(self, arg):
+        """ Skip unit movements and build orders of workers. """
+        words = arg.split(" ")
+        if len(words) > 0:
+            try:
+                playerId = int(words[0])
+            except:
+                self.warn("Need player id")
+                return
+        else:
+            self.warn("Need player id")
+            return
+
+        d = """\
+__pl = gc.getPlayer({pid})
+__num_units = 0
+(__u,__iter) = __pl.firstUnit(False)
+while __u:
+    __u.setMoves(120)
+    __u.setImmobileTimer(1)
+    __num_units = __num_units + 1
+    (__u,__iter) = __pl.nextUnit(__iter, False)
+    if __num_units > 10000:
+        print("Abort loop...")
+        break
+print("Num of affected units: %i" %(__num_units,) )
+""".format(pid=playerId)
+
+        # print(d)
         result = str(self.send("p:"+d))
         print(result)
 
@@ -678,7 +727,7 @@ else:
 
         for k in keys:
             if k in status:
-                print(" %14s: %s" % (k, status[k]))
+                print(" %14s: %s" % (k, status[k]), force=True)
 
         if mode == "pb_admin":
             from datetime import timedelta
@@ -686,17 +735,17 @@ else:
             upt = status.get("uptime")
             if upt:
                 upt = str(timedelta(minutes=int(upt)))
-                print(" %14s: %s" % ("Total uptime", upt))
+                print(" %14s: %s" % ("Total uptime", upt), force=True)
 
             ttv = status.get("turnTimerValue")
             if ttv:
                 ttv = str(timedelta(seconds=int(ttv) / 4))
-                print(" %14s: %s" % ("Current timer", ttv))
+                print(" %14s: %s" % ("Current timer", ttv), force=True)
 
             ttm = status.get("turnTimerMax")
             if ttm:
                 ttm = str(timedelta(hours=int(ttm)))
-                print(" %14s: %s" % ("Next timer", ttm))
+                print(" %14s: %s" % ("Next timer", ttm), force=True)
 
         def player_status(pl):
             s = pl.get("ping", "")
@@ -744,7 +793,7 @@ else:
                 .format(
                     "X", "Id", "Player", "Score",
                     "Leader", "Nation", gcu_head, "Status"
-                ))
+                ), force=True)
             for pl in players_sorted:
                 if bAll:
                     gcu = ("{:4d} {:6d} {:5d} ".format(
@@ -765,7 +814,7 @@ else:
                         pl.get("civilization", "?")[:12],
                         gcu,
                         player_status(pl)
-                    ))
+                    ), force=True)
 
         if mode == "pb_wizard":
             print(
@@ -776,7 +825,7 @@ else:
                   Use 'list', 'load' and 'pb_start' to start a game.
                   Saves with a different mod name requires a complete
                   restart of the program."""
-            )
+            , force=True)
 
         print("")
 
@@ -1749,7 +1798,7 @@ def start(**kwargs):
 
     # Start Input loop
     try:
-        shell.cmdloop()
+        shell.cmdloop(intro=("" if QUIET else shell.intro))
     except KeyboardInterrupt:
         shell.warn("Ctrl+C pressed. Quitting Civ4 shell.")
         shell.close()
