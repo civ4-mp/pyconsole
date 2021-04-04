@@ -802,6 +802,9 @@ else:
                         pl.get("nUnits", -1)))
                 else:
                     gcu = ""
+                
+                if not bAll and int(pl.get("score", "-1")) == 0 and len(players) > 20:
+                    continue
 
                 print(
                     "{:s} {:2d} {:>12s} {:>5s} {:>12s} {:>12s} {:s}{:s}"
