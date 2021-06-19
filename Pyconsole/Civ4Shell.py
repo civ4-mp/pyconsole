@@ -429,6 +429,29 @@ for __i in range(__l):
             result = str(self.send("p:" + d))
             self.feedback(result)
 
+    def do_foo(self, arg):
+        """Prints CvPythonExtensions documentation into file 'foo.txt'
+        """
+        if len(arg.strip()) == 0:
+            # Note that this old python version does not support
+            # something like '__g = pydoc.render_doc(gc)'
+            imports = 'import re, pydoc, sys, cStringIO, CvPythonExtensions'
+            d = '''\
+__stdout_backup = sys.stdout
+__f = cStringIO.StringIO()
+sys.stdout = __f; pydoc.doc(CvPythonExtensions); sys.stdout = __stdout_backup
+__d = __f.getvalue()
+__f.close()
+__f = open("foo.txt", "w")
+__f.write(__d)
+__f.close()
+print("Done")
+'''
+            self.send("p:" + imports)
+            self.default(d)
+            #result = str(self.send("p:" + d))
+            #print(result)
+
     def do_config(self, args):
         """Show, save, reload or edit Pitboss configuration (requires PB Mod).
 
@@ -1038,10 +1061,10 @@ else:
 
         self.webserver_action("kickPlayer", kick_args, 1)
 
-    def do_end_player_turn(self, arg):
+    def do_complete_player_turn(self, arg):
         """ Set turn status on done for player.
 
-        end_player_turn {player id}
+        complete_player_turn {player id}
         """
         try:
             end_args = {"playerId": int(arg)}
@@ -1049,7 +1072,20 @@ else:
             self.warn("Cannot parse player id.")
             return
 
-        self.webserver_action("endPlayerTurn", end_args, 1)
+        self.webserver_action("completePlayerTurn", end_args, 1)
+
+    def do_incomplete_player_turn(self, arg):
+        """ Set turn status on done for player.
+
+        incomplete_player_turn {player id}
+        """
+        try:
+            end_args = {"playerId": int(arg)}
+        except ValueError:
+            self.warn("Cannot parse player id.")
+            return
+
+        self.webserver_action("incompletePlayerTurn", end_args, 1)
 
     def do_chat(self, arg):
         """ Send chat message with optional sound.
