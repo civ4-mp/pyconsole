@@ -1421,6 +1421,18 @@ print(__num_changed_plots)
         result = str(self.send("p:" + d))
         print(result)
 
+    def do_check_handicaps(self, arg):
+        """Compare handicap level/difficulty of players."""
+        d = """\
+for i in range(gc.getMAX_CIV_PLAYERS()-1):
+    if gc.getPlayer(i).isAlive():
+        print("% 2i: %i" %(i, gc.getPlayer(i).getHandicapType()))
+"""
+        result = str(self.send("p:" + d)).strip()
+        print("Handicap of players alive:\n {}".format(result))
+        # List names of levels
+        self.do_names("Handicap")
+
     def do_id(self, arg):
         """ Shortcut for gc.getInfoTypeForString("NAME") """
 
