@@ -366,6 +366,32 @@ print("Num of affected units: %i" %(__num_units,) )
         self.verbose("print('Num Units: %i' % gc.getPlayer(0).getNumUnits())")
         """
 
+    def do_get_vars(self, arg):
+        """List all variables of CyVariableSystem.
+
+ The values can be defined by XML, not Python."""
+        d = """\
+__v = CyVariableSystem()
+__l = [__v.getFirstVariableName()]
+while True:
+    __x = __v.getNextVariableName()
+    if not __x:
+       break
+    __l.append(__x)
+
+for __n in __l:
+    __t = __v.getVariableType(__n)
+    if __t == "float":
+       print('"%s": %f,' %(__n, __v.getValueFloat(__n)))
+    elif __t == "int":
+       print('"%s": %d,' %(__n, __v.getValueInt(__n)))
+    elif __t == "string":
+       print('"%s": "%s",' %(__n, __v.getValueString(__n)))
+
+"""
+        result = str(self.send("p:"+d))
+        print(result)
+
     def do_doc(self, arg):
         """Fetch pydoc information"""
         if len(arg) > 0:
