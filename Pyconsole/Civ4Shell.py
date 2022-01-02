@@ -100,6 +100,7 @@ class Client:
     def connect(self, tAddrPort):
         print("Connect to %s" % str(tAddrPort))
         self.s.connect(tAddrPort)
+        self.s.settimeout(5.0)
 
     def close(self):
         if self.s is not None:
