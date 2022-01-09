@@ -751,6 +751,10 @@ else:
 
         result = str(self.send("s:"))
         try:
+            if result:
+                # Strip pending output of previous command
+                result = result[result.find("{"):]
+
             status = json.loads(result)
         except ValueError:
             status = {"error": "Can not decode status."}
@@ -1278,13 +1282,15 @@ if( gc.getMAX_CIV_PLAYERS() > {iPlayer} and {iPlayer} > -1):
     __uNames = []
     while __u is not None:
         if  __u.plot().isCity():
-            __pos = "(%i,%i) %s" % (__u.plot().getX(),__u.plot().getY(),
+            __pos = "(%2i,%2i) %s" % (__u.plot().getX(),__u.plot().getY(),
                     __u.plot().getPlotCity().getName().encode("utf-8"))
         else:
-            __pos = "(%i,%i)" % (__u.plot().getX(),__u.plot().getY())
-        __uNames.append("%3i %-30s %s" % (
+            __pos = "(%2i,%2i)" % (__u.plot().getX(),__u.plot().getY())
+        __uNames.append("%7i %i/%i %-28s %s" % (
           __u.getID(),
-          __u.getName().encode("utf-8"),
+          __u.movesLeft()/60,
+          __u.maxMoves()/60,
+          __u.getName().encode("utf-8")[:28],
           __pos)
           )
         (__u, __iterOut) = __pPl.nextUnit(__iterOut, False)
@@ -1301,7 +1307,7 @@ if( gc.getMAX_CIV_PLAYERS() > {iPlayer} and {iPlayer} > -1):
             # Avoid contamination with string 'load_module encodings.utf_8'
             self.send("p:" + "encodings.utf_8")
 
-            result = str(self.send("p:" + d)).strip()
+            result = str(self.send("p:" + d))
             if len(result) > 0:
                 self.feedback("Units of player {0}:".format(iPlayer))
                 uNames = result.split("\n")
