@@ -10,7 +10,7 @@ import ast
 import sys
 import re
 import json
-# import os.path
+import os.path
 import socket
 from socket import gethostname
 from time import sleep
@@ -921,12 +921,31 @@ else:
         saves = self.getPbSaves("*", pat, num)
         saves.reverse()  # Newest at top
         index = 1
-        # print(saves)
+
+        # Evaluate space needed for mod name
+        mod_name_max_len = 20  # Upper bound
+        mod_name_len = 4       # Lower bound
         for s in saves:
-            print(
-                "%2i - %20s | %s"
-                % (index, s.get("date", "date?"), s.get("name", "name?"))
-            )
+                mod_name_len = max(mod_name_len,len(s.get("mod","")))
+        mod_name_len = min(mod_name_max_len, mod_name_len)
+
+        # Prepare format strings
+        HEADER_FMT="{{}}- {{:24s}} {{:{}s}} | {{}}".format(mod_name_len)
+        LINE_FMT="{{IDX:2d}} - {{DATE:24s}} {{MOD:{}s}}{{DOTS}}| {{NAME}}".format(mod_name_len)
+
+        print(HEADER_FMT.format("Idx", "Date", "Mod", "Name (without extension)"))
+        for s in saves:
+            date = s.get("date", "date?")
+            mod = s.get("mod", "-?-")
+            name = os.path.splitext(s.get("name", "name?"))[0]
+            print(LINE_FMT.format(
+                        IDX=index,
+                        DATE=date,
+                        MOD=mod[:mod_name_len],
+                        DOTS= "…" if len(mod)>mod_name_len else " ",
+                        NAME=name,
+                        )
+                 )
             index += 1
 
         self.latest_save_list = saves
@@ -1764,6 +1783,10 @@ encoding='{5}'))""".format(
         # print(d)
         result = str(self.send("p:" + d))
         if result:
+            # Strip pending output of previous command
+            # and 'load_module posixpath' line
+            result = result[result.find("{"):]
+
             json_str = result[result.find("{"): result.rfind("}") + 1]
 
             try:
