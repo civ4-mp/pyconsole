@@ -1335,6 +1335,52 @@ if( gc.getMAX_CIV_PLAYERS() > {iPlayer} and {iPlayer} > -1):
             else:
                 self.warn("Player {0} has no units?!".format(iPlayer))
 
+    def do_list_signs(self, arg):
+        """List all signs of a player.
+
+        Usage: list_signs {Player id}
+
+        The id can be used in 'rename_city'.
+        """
+        if len(arg) < 1:
+            print(self.do_list_signs.__doc__)
+            return
+
+        d = None
+        try:
+            args = arg.split(" ")
+            iPlayer = int(args[0])
+            d = """\
+__signs = []
+for i in range(CyEngine().getNumSigns()):
+    __sign = CyEngine().getSignByIndex(i)
+    if __sign.getPlayerType() == {iPlayer}:
+        __tmp = "%3d %-30s (%i,%i)" % (
+          i,
+          __sign.getCaption().encode('utf-8'),
+          __sign.getPlot().getX(),
+          __sign.getPlot().getY())
+        __signs.append(__tmp)
+
+print("\\n".join(__signs))
+""".format(
+                iPlayer=iPlayer
+            )
+
+        except ValueError:
+            self.warn("First argument is no integer.")
+
+        if d:
+            # Avoid contamination with string 'load_module encodings.utf_8'
+            self.send("p:" + "encodings.utf_8")
+
+            result = str(self.send("p:" + d)).strip()
+            if len(result) > 0:
+                self.feedback("Signs of player {0}:".format(iPlayer))
+                self.feedback(result)
+            else:
+                self.warn("Player {0} has no sign set.".format(iPlayer))
+
     def do_rename_player(self, arg):
         """Allows renaming with respect to some Non-ASCII characters (cp1252 encoding).
 
@@ -1572,6 +1618,40 @@ for i in range(gc.getMAX_CIV_PLAYERS()-1):
         print("Handicap of players alive:\n {}".format(result))
         # List names of levels
         self.do_names("Handicap")
+
+    def do_reset_starting_techs(self, arg):
+        """Give each team the default starting techs (ignoring AI handycap).
+
+Useful if map creator forgot to fix this entries.
+        """
+
+        d = """\
+print("Removing techs of all teams.")
+for __iTeam in range(gc.getMAX_CIV_PLAYERS()):
+  __team = gc.getTeam(__iTeam)
+  if not __team.isAlive():
+    continue
+  for __iTech in range(gc.getNumTechInfos()):
+    __team.setHasTech(__iTech, False, -1, False, False)
+
+print("Adding default techs of each player.")
+for __iPlayer in range(gc.getMAX_CIV_PLAYERS()):
+  __pl = gc.getPlayer(__iPlayer)
+  if not __pl.isAlive():
+    continue
+
+  __team = gc.getTeam(__pl.getTeam())
+  __civInfo = gc.getCivilizationInfo(__pl.getCivilizationType())
+  for __iTech in range(gc.getNumTechInfos()):
+    if __civInfo.isCivilizationFreeTechs(__iTech):
+      __team.setHasTech(__iTech, True, __iPlayer, False, False)
+      __techName = gc.getTechInfo(__iTech).getText()
+      print("  Player %i got %s" % ( __iPlayer,__techName))
+
+print("Done")
+"""
+        result = str(self.send("p:" + d))
+        print(result)
 
     def do_id(self, arg):
         """ Shortcut for gc.getInfoTypeForString("NAME") """
