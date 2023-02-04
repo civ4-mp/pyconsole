@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os
 import Civ4Shell
 
 import argparse
@@ -16,7 +17,7 @@ except:
 
 parser = argparse.ArgumentParser(description='Commandline interface to Civ4 games with pyconsole support.')
 parser.add_argument('-q', '--quiet', action='store_true', 
-                    help='Print retured text from game only.')
+                    help='Print returned text from game only.')
 #parser.add_argument('-p', '--port', type=int, default=Civ4Shell.PYCONSOLE_PORT,
 #                    help="Port of Civ4's Pyconsole backend.")
 parser.add_argument('-x', '--host', type=str, default=Civ4Shell.PYCONSOLE_HOSTNAME,
@@ -27,6 +28,10 @@ parser.add_argument('game', help="PORT or GAME NAME. Default port of backend is 
 args = parser.parse_args()
 
 if args.quiet:
+    Civ4Shell.QUIET = True
+
+# Check if input is given by pipe
+if not os.isatty(sys.stdin.fileno()):
     Civ4Shell.QUIET = True
 
 # Translate game name into port
