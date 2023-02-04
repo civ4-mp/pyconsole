@@ -54,9 +54,13 @@ QUIET = False
 # Storage file for history
 PYCONSOLE_HIST_FILE = ".pyconsole.history"
 
-MY_PROMPT = ""
-# MY_PROMPT = 'civ4> '
-RESULT_LINE_PREFIX = "    "
+if False:
+    MY_PROMPT = ""
+    RESULT_LINE_PREFIX = "    "
+else:
+    MY_PROMPT = 'civ4> '
+    RESULT_LINE_PREFIX = ""
+
 RESULT_LINE_SPLIT = (160, "  ")
 
 BUFFER_SIZE = 1024
@@ -113,6 +117,9 @@ class Client:
                 print("Shutdown failed. Error was {}".format(e))
                 # Catching error avoid skip of history file write.
 
+        # Clear prompt
+        sys.stdout.write("\r\033[K")
+
     def send(self, msg, bRecv=True):
         self.s.send((msg + EOF).encode(ENCODING2))  # Python3: str->bytes
         ret = ""
@@ -159,7 +166,7 @@ class Civ4Shell(cmd.Cmd):
     remote_server_adr = (PYCONSOLE_HOSTNAME, PYCONSOLE_PORT)
     local_server_adr = (MY_HOSTNAME, PYCONSOLE_PORT + 1)
 
-    prompt = ""
+    prompt = MY_PROMPT
 
     short_config_usage = "Usage: config [show|reload|save|edit [key]=[value]]"
     term_background_dark = True
@@ -238,7 +245,7 @@ class Civ4Shell(cmd.Cmd):
             print(s_with_tabs)
 
         # Restore prompt
-        sys.stdout.write("%s" % (MY_PROMPT))
+        # sys.stdout.write("%s" % (MY_PROMPT))
 
     def emptyline(self):
         """Do nothing on empty input line"""
