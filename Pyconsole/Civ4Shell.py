@@ -1245,7 +1245,7 @@ else:
             args = arg.split(" ")
             iPlayer = int(args[0])
             d = """\
-if( gc.getMAX_CIV_PLAYERS() > {iPlayer} and {iPlayer} > -1):
+if( gc.getMAX_CIV_PLAYERS() >= {iPlayer} and {iPlayer} > -1):
     __pPl = gc.getPlayer({iPlayer})
     (__c, __iterOut) = __pPl.firstCity(False)
     __cNames = []
@@ -1295,7 +1295,7 @@ if( gc.getMAX_CIV_PLAYERS() > {iPlayer} and {iPlayer} > -1):
             args = arg.split(" ")
             iPlayer = int(args[0])
             d = """\
-if( gc.getMAX_CIV_PLAYERS() > {iPlayer} and {iPlayer} > -1):
+if( gc.getMAX_CIV_PLAYERS() >= {iPlayer} and {iPlayer} > -1):
     __pPl = gc.getPlayer({iPlayer})
     (__u, __iterOut) = __pPl.firstUnit(False)
     __uNames = []
