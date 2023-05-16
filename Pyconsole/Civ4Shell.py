@@ -359,6 +359,43 @@ print("Num of affected units: %i" %(__num_units,) )
         result = str(self.send("p:"+d))
         print(result)
 
+    def do_zuschauer(self, args):
+        """Show/Hide plots for given player id
+
+        zuschauer {Player id} [bShow]"""
+
+        args = args.strip().split(" ")
+        iShowChange = 1
+        if len(args) > 1:
+            if args[1].lower() == "false" or int(args[1]) == 0:
+                iShowChange = -1
+
+        if len(args) > 0:
+            try:
+                playerId = int(args[0])
+            except:
+                self.warn("Need player id")
+                return
+        else:
+            self.warn("Need player id")
+            return
+
+        d = """\
+__N = CyMap().getGridWidth()
+__M = CyMap().getGridHeight()
+if CyMap().isWrapY():
+    __M -= 1
+if CyMap().isWrapX() and not CyMap().isWrapY():
+    __N -= 1
+for __n in range(__N):
+    for __m in range(__M):
+        CyMap().plot(__n, __m).changeVisibilityCount({PLAYER}, {SHOW}, 1)
+print("Done")
+""".format(PLAYER=playerId, SHOW=iShowChange)
+
+        result = str(self.send("p:" + d)).strip()
+        print("Server returns: '{}'".format(result))
+
     def do_test(self, arg):
         """Send test commands to backend."""
         print(" Change amount of gold (Player 0):")
@@ -863,7 +900,7 @@ else:
                         pl.get("nUnits", -1)))
                 else:
                     gcu = ""
-                
+
                 if not bAll and int(pl.get("score", "-1")) == 0 and len(players) > 20:
                     continue
 
@@ -1027,46 +1064,31 @@ else:
     '''
 
     def do_pb_end_turn(self, arg):
-        """ Set turn complete flag of player. Use 'status' to get player id.
+        """ Set turn complete flag of all players.
 
-            Format: pb_end_turn {iPlayer}
+            Format: pb_end_turn
         """
 
-        d = None
-        if len(arg) > 0:
-            # Interpret arg as number or pattern
-            try:
-                iPlayer = int(arg.split(" ")[0])
-                d = """\
-if( gc.getMAX_CIV_PLAYERS() > {iPlayer} and {iPlayer} > -1):
-    if not CyPitboss().getPlayerAdminData({iPlayer}).bTurnActive:
-        print(-1)
-    else:
-        gc.getGame().sendTurnCompletePB({iPlayer})
-        print(0)
-else:
-    print(-2)
-""".format(
-                    iPlayer=iPlayer
-                )
-                # Note that setActivePlayer(...) could crash the game if
-                # the player id is to big.
-            except ValueError:
-                self.warn("Input argument is no integer.")
-        else:
-            self.warn("Argument for Player id missing.")
+        d = """\
+if CyGame().isPaused():
+    CyGame().setPausePlayer(-1)
 
+if not hasattr(CyMessageControl(), "sendTurnCompletePB"):
+    for __iP in range(gc.getMAX_CIV_PLAYERS()):
+        CyGame().sendTurnCompletePB(__iP)
+else:
+    for __iP in range(gc.getMAX_CIV_PLAYERS()):
+        CyMessageControl().sendTurnCompletePB(__iP)
+
+print(0)
+"""
         if d:
             result = str(self.send("p:" + d)).strip()
             if result == "0":
-                self.feedback("End turn of player {0} successful."
-                              .format(iPlayer))
-            elif result == "-1":
-                self.warn("Turn of player {0} is already finished."
-                          .format(iPlayer))
+                self.feedback("End turn successful.")
             else:
-                self.warn("End turn of player {0} failed. Server returns '{1}'"
-                          .format(iPlayer, result))
+                self.warn("Ending of turn failed. Server returns: '{}'"
+                          .format(result))
 
     def do_pb_set_timer(self, arg):
         """ Set timer for next round(s).
